@@ -22,7 +22,8 @@ import {
   getBurnoutAdvice,
   getChatResponse,
   performNaturalSearch,
-  getAINotificationContent
+  getAINotificationContent,
+  clearAICoachCache
 } from "./ai-coach-service";
 
 const resolvedDirname = typeof __dirname !== "undefined"
@@ -1885,9 +1886,9 @@ app.post("/api/mood", authenticate, (req: any, res) => {
 // ==========================================
 
 // Helper to retrieve user analytics context dynamically
-function getInsightsContext(userId: string): InsightsData {
+function getInsightsContext(userId: string, refresh = false): InsightsData {
   let insights = db.analyticsCache[userId];
-  if (!insights) {
+  if (!insights || refresh) {
     insights = calculateUserInsights(
       userId,
       db.goals,
@@ -1909,7 +1910,11 @@ function getInsightsContext(userId: string): InsightsData {
 // AI coach general report
 app.get("/api/ai/coach", authenticate, async (req: any, res) => {
   try {
-    const insights = getInsightsContext(req.userId);
+    const refresh = req.query.refresh === "true";
+    if (refresh) {
+      clearAICoachCache(req.userId);
+    }
+    const insights = getInsightsContext(req.userId, refresh);
     const data = {
       goals: db.goals,
       tasks: db.tasks,
@@ -1931,7 +1936,11 @@ app.get("/api/ai/coach", authenticate, async (req: any, res) => {
 // Daily AI summary
 app.get("/api/ai/daily-summary", authenticate, async (req: any, res) => {
   try {
-    const insights = getInsightsContext(req.userId);
+    const refresh = req.query.refresh === "true";
+    if (refresh) {
+      clearAICoachCache(req.userId);
+    }
+    const insights = getInsightsContext(req.userId, refresh);
     const data = {
       goals: db.goals,
       tasks: db.tasks,
@@ -1953,7 +1962,11 @@ app.get("/api/ai/daily-summary", authenticate, async (req: any, res) => {
 // Weekly review
 app.get("/api/ai/weekly-review", authenticate, async (req: any, res) => {
   try {
-    const insights = getInsightsContext(req.userId);
+    const refresh = req.query.refresh === "true";
+    if (refresh) {
+      clearAICoachCache(req.userId);
+    }
+    const insights = getInsightsContext(req.userId, refresh);
     const data = {
       goals: db.goals,
       tasks: db.tasks,
@@ -1975,7 +1988,11 @@ app.get("/api/ai/weekly-review", authenticate, async (req: any, res) => {
 // Monthly review
 app.get("/api/ai/monthly-review", authenticate, async (req: any, res) => {
   try {
-    const insights = getInsightsContext(req.userId);
+    const refresh = req.query.refresh === "true";
+    if (refresh) {
+      clearAICoachCache(req.userId);
+    }
+    const insights = getInsightsContext(req.userId, refresh);
     const data = {
       goals: db.goals,
       tasks: db.tasks,

@@ -17,6 +17,22 @@ import {
 const responseCache = new Map<string, { data: any; expiry: number }>();
 const CACHE_DURATION_MS = 1000 * 60 * 30; // 30 minutes cache for static reports
 
+export function clearAICoachCache(userId?: string): void {
+  if (!userId) {
+    responseCache.clear();
+    console.log("[AI Coach Cache] Entire response cache cleared.");
+    return;
+  }
+  let deletedCount = 0;
+  for (const key of Array.from(responseCache.keys())) {
+    if (key.includes(userId)) {
+      responseCache.delete(key);
+      deletedCount++;
+    }
+  }
+  console.log(`[AI Coach Cache] Cleared ${deletedCount} cache items for user ${userId}.`);
+}
+
 function getCached(key: string): any | null {
   const cached = responseCache.get(key);
   if (cached && Date.now() < cached.expiry) {

@@ -122,8 +122,10 @@ export default function AICoachPanel({
 
   // Auto trigger daily and coach on mount
   useEffect(() => {
-    fetchDailySummary();
-    fetchCoachReport();
+    if (token) {
+      fetchDailySummary();
+      fetchCoachReport();
+    }
   }, [token]);
 
   // Alert handler
@@ -134,6 +136,7 @@ export default function AICoachPanel({
 
   // API Call general wrapper
   const fetchAIEndpoint = async (endpoint: string, method: "GET" | "POST" = "GET", body: any = null) => {
+    if (!token) return null;
     try {
       const headers = {
         "Content-Type": "application/json",
@@ -157,9 +160,10 @@ export default function AICoachPanel({
   };
 
   // 1. Fetch Coach Report
-  const fetchCoachReport = async () => {
+  const fetchCoachReport = async (refresh = false) => {
+    if (!token) return;
     setLoadingCoach(true);
-    const data = await fetchAIEndpoint("/api/ai/coach");
+    const data = await fetchAIEndpoint(refresh ? "/api/ai/coach?refresh=true" : "/api/ai/coach");
     if (data && data.report) {
       setCoachReport(data.report);
     }
@@ -167,9 +171,10 @@ export default function AICoachPanel({
   };
 
   // 2. Fetch Daily summary
-  const fetchDailySummary = async () => {
+  const fetchDailySummary = async (refresh = false) => {
+    if (!token) return;
     setLoadingDaily(true);
-    const data = await fetchAIEndpoint("/api/ai/daily-summary");
+    const data = await fetchAIEndpoint(refresh ? "/api/ai/daily-summary?refresh=true" : "/api/ai/daily-summary");
     if (data && data.summary) {
       setDailySummary(data.summary);
     }
@@ -380,7 +385,7 @@ export default function AICoachPanel({
         </div>
         <div className="flex items-center gap-2 self-end sm:self-center">
           <button
-            onClick={() => { fetchDailySummary(); fetchCoachReport(); }}
+            onClick={() => { fetchDailySummary(true); fetchCoachReport(true); }}
             className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-200 rounded-xl transition-all cursor-pointer border border-slate-100 dark:border-slate-750"
             title="Recalculate models metrics"
           >
