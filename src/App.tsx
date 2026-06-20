@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Goal, GoalTask, Skill, Course, Chapter, Project, ProjectTask, DailyTask, Activity, Quote } from "./types";
+import { User, Goal, GoalTask, Skill, Course, Chapter, Project, ProjectTask, DailyTask, Activity, Quote, InsightsData } from "./types";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import DailyQuotes from "./components/DailyQuotes";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -7,6 +7,7 @@ import GoalConsole from "./components/GoalConsole";
 import ProjectBoard from "./components/ProjectBoard";
 import DailiesPlanner from "./components/DailiesPlanner";
 import NotificationsCenter from "./components/NotificationsCenter";
+import InsightsDashboard from "./components/InsightsDashboard";
 import {
   Flame,
   Target,
@@ -28,7 +29,8 @@ import {
   Eye,
   Menu,
   X,
-  Bookmark
+  Bookmark,
+  Brain
 } from "lucide-react";
 
 export default function App() {
@@ -48,9 +50,11 @@ export default function App() {
   const [dailies, setDailies] = useState<DailyTask[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [insights, setInsights] = useState<InsightsData | null>(null);
 
   // Navigation state
-  const [currentScreen, setCurrentScreen] = useState<"dashboard" | "goals" | "projects" | "habits" | "search">("dashboard");
+  const [currentScreen, setCurrentScreen] = useState<"dashboard" | "goals" | "projects" | "habits" | "search" | "insights">("dashboard");
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Authentication states
@@ -113,6 +117,7 @@ export default function App() {
         dailiesRes,
         activitiesRes,
         quotesRes,
+        insightsRes,
       ] = await Promise.all([
         apiFetch("/api/goals"),
         apiFetch("/api/projects"),
@@ -120,6 +125,7 @@ export default function App() {
         apiFetch("/api/dailies"),
         apiFetch("/api/activities"),
         apiFetch("/api/quotes"),
+        apiFetch("/api/insights").catch(() => null),
       ]);
 
       setGoals(goalsRes);
@@ -127,6 +133,7 @@ export default function App() {
       setDailies(dailiesRes);
       setActivities(activitiesRes);
       setQuotes(quotesRes);
+      setInsights(insightsRes);
 
       // Cascade fetch linked details (tasks, skills, courses, chapters) for all goals
       const allTasks: GoalTask[] = [];
@@ -508,6 +515,35 @@ export default function App() {
     );
   };
 
+  const handleRecalculateInsights = async () => {
+    setApiLoading(true);
+    try {
+      const res = await apiFetch("/api/insights/recalculate", { method: "POST" });
+      setInsights(res);
+    } catch (err) {
+      console.error("Failed to recalculate index:", err);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  const handleLogMood = async (mood: "Motivated" | "Happy" | "Neutral" | "Stressed" | "Tired") => {
+    setApiLoading(true);
+    try {
+      await apiFetch("/api/mood", {
+        method: "POST",
+        body: JSON.stringify({ mood }),
+      });
+      const fresh = await apiFetch("/api/insights");
+      setInsights(fresh);
+    } catch (err) {
+      console.error("Failed to update daily mood:", err);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+
   // --- COMPREHENSIVE SEARCH INDEX ENGINE MATCH DETAILS ---
   const getSearchedResults = () => {
     const query = globalSearchToken.toLowerCase().trim();
@@ -808,6 +844,16 @@ export default function App() {
               <Flame className="w-4 h-4" /> Habit routines
             </button>
             <button
+              onClick={() => setCurrentScreen("insights")}
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                currentScreen === "insights"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-slate-800 dark:text-indigo-400"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 dark:text-slate-350 dark:hover:bg-slate-800"
+              }`}
+            >
+              <Brain className="w-4 h-4" /> AI Insights
+            </button>
+            <button
               onClick={() => setCurrentScreen("search")}
               className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                 currentScreen === "search"
@@ -887,6 +933,12 @@ export default function App() {
               className="text-xs font-bold p-3 rounded-lg text-left hover:bg-slate-50 flex items-center gap-2"
             >
               <Flame className="w-4 h-4 text-slate-500" /> Habit routines
+            </button>
+            <button
+              onClick={() => { setCurrentScreen("insights"); setMobileMenuOpen(false); }}
+              className="text-xs font-bold p-3 rounded-lg text-left hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Brain className="w-4 h-4 text-slate-500" /> AI Insights
             </button>
             <button
               onClick={() => { setCurrentScreen("search"); setMobileMenuOpen(false); }}
@@ -1364,7 +1416,26 @@ export default function App() {
           </div>
         )}
 
+        {/* SCREEN 6: PREDICTIVE ML INSIGHTS DASHBOARD */}
+        {currentScreen === "insights" && (
+          <div className="animate-fadeIn">
+            <InsightsDashboard
+              insights={insights}
+              onRecalculate={handleRecalculateInsights}
+              onLogMood={handleLogMood}
+              isLoading={apiLoading}
+              goals={goals}
+              dailies={dailies}
+              skills={skills}
+              courses={courses}
+              chapters={chapters}
+              projects={projects}
+            />
+          </div>
+        )}
+
       </main>
+
 
       {/* Profile Edit Settings dialogmodal popup */}
       {showProfileModal && (

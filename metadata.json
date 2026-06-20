@@ -1,6 +1,6 @@
 {
   "name": "GoalTracker",
-  "description": "Comprehensive interview preparation, learning goals, skills tracking, course progress, hands-on projects, daily habits, and analytics platform with robust streak tracking and Progressive Web App support.",
+  "description": "Comprehensive interview readiness, learning goals, skills tracking, course progress, hands-on projects, daily habits, and predictive machine learning analytics platform with robust streak tracking and Progressive Web App support.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

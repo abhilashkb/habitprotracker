@@ -131,3 +131,106 @@ export interface Quote {
   category: string;
   isFavorite?: boolean;
 }
+
+export interface MoodLog {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  mood: "Motivated" | "Happy" | "Neutral" | "Stressed" | "Tired";
+}
+
+export interface HabitSuccessScore {
+  habitId: string;
+  title: string;
+  probability: number;
+  streak: number;
+  reason: string;
+}
+
+export interface HabitFailureRisk {
+  habitId: string;
+  title: string;
+  riskLevel: "High" | "Medium" | "Low";
+  message: string;
+  recommendation: string;
+}
+
+export interface ProductivityPatterns {
+  peakDays: string[];
+  peakHours: string;
+  weekendConsistency: "lower" | "similar" | "higher";
+  message: string;
+}
+
+export interface StreakWarning {
+  habitId: string;
+  title: string;
+  message: string;
+}
+
+export interface GoalForecast {
+  goalId: string;
+  title: string;
+  progress: number;
+  progressRate: number; // velocity per week
+  estimatedCompletionDate: string;
+  confidence: "High" | "Medium" | "Low";
+  reason: string;
+}
+
+export interface LearningVelocity {
+  chaptersThisWeek: number;
+  tasksThisWeek: number;
+  courseCompletedCount: number;
+  message: string;
+  changePercentage: number;
+}
+
+export interface SkillReadiness {
+  skillId: string;
+  skillName: string;
+  score: number;
+  status: string;
+  confidenceLevel: number;
+}
+
+export interface InterviewReadiness {
+  score: number;
+  status: "Beginner" | "Intermediate" | "Advanced" | "Interview Ready";
+  checklist: string[];
+  details: string;
+}
+
+export interface BurnoutScore {
+  score: number;
+  riskLevel: "Low" | "Medium" | "High";
+  indicators: string[];
+  recommendations: string[];
+}
+
+export interface SmartRecommendation {
+  id: string;
+  text: string;
+  type: "course" | "habit" | "schedule" | "general";
+}
+
+export interface MoodAnalytics {
+  last7Days: { date: string; mood: string; productivityRating: number }[];
+  correlationMessage: string;
+}
+
+export interface InsightsData {
+  habitSuccess: HabitSuccessScore[];
+  failureRisk: HabitFailureRisk[];
+  productivityPatterns: ProductivityPatterns;
+  streakWarnings: StreakWarning[];
+  goalForecasts: GoalForecast[];
+  learningVelocity: LearningVelocity;
+  skillReadiness: SkillReadiness[];
+  interviewReadiness: InterviewReadiness;
+  burnout: BurnoutScore;
+  smartRecommendations: SmartRecommendation[];
+  moodAnalytics: MoodAnalytics;
+  lastUpdated: string;
+}
+

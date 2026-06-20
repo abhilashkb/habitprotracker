@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
+import { calculateUserInsights } from "./analytics-engine";
 
 const resolvedDirname = typeof __dirname !== "undefined"
   ? __dirname
@@ -171,6 +172,15 @@ interface DbStructure {
   activities: Activity[];
   quotes: Quote[];
   sessions: { [token: string]: string }; // token -> userId
+  moodLogs: MoodLog[];
+  analyticsCache: { [userId: string]: any };
+}
+
+interface MoodLog {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  mood: "Motivated" | "Happy" | "Neutral" | "Stressed" | "Tired";
 }
 
 // --- GLOBAL STATE IN-MEMORY + STICKY JSON WRITING ---
@@ -187,6 +197,8 @@ let db: DbStructure = {
   activities: [],
   quotes: [],
   sessions: {},
+  moodLogs: [],
+  analyticsCache: {},
 };
 
 // Seeding Default Quotes
@@ -221,6 +233,8 @@ function loadDb() {
       if (!db.activities) db.activities = [];
       if (!db.quotes || db.quotes.length === 0) db.quotes = DEFAULT_QUOTES;
       if (!db.sessions) db.sessions = {};
+      if (!db.moodLogs) db.moodLogs = [];
+      if (!db.analyticsCache) db.analyticsCache = {};
     } else {
       db.quotes = DEFAULT_QUOTES;
       saveDb();
@@ -1701,6 +1715,150 @@ app.post("/api/quotes/:id/favorite", authenticate, (req: any, res) => {
     isFavorite: user.favoriteQuotes.includes(quoteId),
   });
 });
+
+// --- PREDICTIVE INSIGHTS & MOOD TRACKING API ---
+
+// Support scheduled background calculation by periodically running calculations for cached entries
+// Background calculation job runner simulating every hour loop
+setInterval(() => {
+  console.log("[GoalTracker Engine] Triggering background calculation of predictive analytics cache...");
+  const uniqueUserIds = [...new Set(db.users.map((u) => u.id))];
+  uniqueUserIds.forEach((uId) => {
+    try {
+      const result = calculateUserInsights(
+        uId,
+        db.goals,
+        db.tasks,
+        db.skills,
+        db.courses,
+        db.chapters,
+        db.projects,
+        db.projectTasks,
+        db.dailies,
+        db.activities,
+        db.moodLogs
+      );
+      db.analyticsCache[uId] = result;
+    } catch (e) {
+      console.error(`Background job failed for user ${uId}:`, e);
+    }
+  });
+  saveDb();
+}, 1000 * 60 * 60);
+
+app.get("/api/insights", authenticate, (req: any, res) => {
+  try {
+    let cached = db.analyticsCache[req.userId];
+    if (!cached || !cached.lastUpdated) {
+      cached = calculateUserInsights(
+        req.userId,
+        db.goals,
+        db.tasks,
+        db.skills,
+        db.courses,
+        db.chapters,
+        db.projects,
+        db.projectTasks,
+        db.dailies,
+        db.activities,
+        db.moodLogs
+      );
+      db.analyticsCache[req.userId] = cached;
+      saveDb();
+    }
+    res.json(cached);
+  } catch (err: any) {
+    console.error("Insights calculation error:", err);
+    res.status(500).json({ error: "Could not calculate analytical metrics yet. Try adding some activities, goals, or direct daily habits." });
+  }
+});
+
+app.post("/api/insights/recalculate", authenticate, (req: any, res) => {
+  try {
+    const updated = calculateUserInsights(
+      req.userId,
+      db.goals,
+      db.tasks,
+      db.skills,
+      db.courses,
+      db.chapters,
+      db.projects,
+      db.projectTasks,
+      db.dailies,
+      db.activities,
+      db.moodLogs
+    );
+    db.analyticsCache[req.userId] = updated;
+    saveDb();
+    res.json(updated);
+  } catch (err: any) {
+    console.error("Insights database recalculate error:", err);
+    res.status(500).json({ error: "Failed to force recalculation index." });
+  }
+});
+
+app.get("/api/mood/history", authenticate, (req: any, res) => {
+  const userMoods = db.moodLogs.filter((m) => m.userId === req.userId);
+  res.json(userMoods);
+});
+
+app.post("/api/mood", authenticate, (req: any, res) => {
+  const { mood, date } = req.body;
+  if (!mood) {
+    return res.status(400).json({ error: "Mood selection index is required" });
+  }
+
+  const validMoods = ["Motivated", "Happy", "Neutral", "Stressed", "Tired"];
+  if (!validMoods.includes(mood)) {
+    return res.status(400).json({ error: "Provided mood key is invalid" });
+  }
+
+  let entryDate = date;
+  if (!entryDate) {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    entryDate = `${year}-${month}-${day}`;
+  }
+
+  // Update existing or push new entry
+  const existingIdx = db.moodLogs.findIndex((m) => m.userId === req.userId && m.date === entryDate);
+  if (existingIdx > -1) {
+    db.moodLogs[existingIdx].mood = mood;
+  } else {
+    db.moodLogs.push({
+      id: `mood_${Date.now()}`,
+      userId: req.userId,
+      date: entryDate,
+      mood,
+    });
+  }
+
+  // Recalculate cache instantly
+  try {
+    const refreshed = calculateUserInsights(
+      req.userId,
+      db.goals,
+      db.tasks,
+      db.skills,
+      db.courses,
+      db.chapters,
+      db.projects,
+      db.projectTasks,
+      db.dailies,
+      db.activities,
+      db.moodLogs
+    );
+    db.analyticsCache[req.userId] = refreshed;
+  } catch (e) {
+    console.warn("Recalculate index fallback warn:", e);
+  }
+
+  saveDb();
+  res.json({ success: true, date: entryDate, mood });
+});
+
 
 // --- MAIN AND VITE DEV MIDDLEWARE HANDLER ---
 
