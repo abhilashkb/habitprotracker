@@ -4,6 +4,26 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { calculateUserInsights } from "./analytics-engine";
+import { InsightsData } from "./src/types";
+import {
+  getAICoachReport,
+  getDailyAISummary,
+  getWeeklyAISummary,
+  getMonthlyReview,
+  getSmartGoalPlan,
+  getRoadmapPlan,
+  getProjectIdeas,
+  getMockInterview,
+  getSkillGapAnalysis,
+  getResumeAssistance,
+  getHabitImprovementAdvisor,
+  getStudyNotesSummary,
+  getProjectReview,
+  getBurnoutAdvice,
+  getChatResponse,
+  performNaturalSearch,
+  getAINotificationContent
+} from "./ai-coach-service";
 
 const resolvedDirname = typeof __dirname !== "undefined"
   ? __dirname
@@ -1858,6 +1878,438 @@ app.post("/api/mood", authenticate, (req: any, res) => {
   saveDb();
   res.json({ success: true, date: entryDate, mood });
 });
+
+
+// ==========================================
+// --- QWEN-POWERED AI ASSISTANT & COACH API ---
+// ==========================================
+
+// Helper to retrieve user analytics context dynamically
+function getInsightsContext(userId: string): InsightsData {
+  let insights = db.analyticsCache[userId];
+  if (!insights) {
+    insights = calculateUserInsights(
+      userId,
+      db.goals,
+      db.tasks,
+      db.skills,
+      db.courses,
+      db.chapters,
+      db.projects,
+      db.projectTasks,
+      db.dailies,
+      db.activities,
+      db.moodLogs
+    );
+    db.analyticsCache[userId] = insights;
+  }
+  return insights;
+}
+
+// AI coach general report
+app.get("/api/ai/coach", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      chapters: db.chapters,
+      projects: db.projects,
+      projectTasks: db.projectTasks,
+      dailies: db.dailies,
+      activities: db.activities
+    };
+    const report = await getAICoachReport(req.userId, data, insights);
+    res.json({ report });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate coach report" });
+  }
+});
+
+// Daily AI summary
+app.get("/api/ai/daily-summary", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      chapters: db.chapters,
+      projects: db.projects,
+      projectTasks: db.projectTasks,
+      dailies: db.dailies,
+      activities: db.activities
+    };
+    const summary = await getDailyAISummary(req.userId, data, insights);
+    res.json({ summary });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate daily summary" });
+  }
+});
+
+// Weekly review
+app.get("/api/ai/weekly-review", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      chapters: db.chapters,
+      projects: db.projects,
+      projectTasks: db.projectTasks,
+      dailies: db.dailies,
+      activities: db.activities
+    };
+    const review = await getWeeklyAISummary(req.userId, data, insights);
+    res.json({ review });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate weekly review" });
+  }
+});
+
+// Monthly review
+app.get("/api/ai/monthly-review", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      chapters: db.chapters,
+      projects: db.projects,
+      projectTasks: db.projectTasks,
+      dailies: db.dailies,
+      activities: db.activities
+    };
+    const review = await getMonthlyReview(req.userId, data, insights);
+    res.json({ review });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate monthly review" });
+  }
+});
+
+// Smart Goal planning
+app.post("/api/ai/plan-goal", authenticate, async (req: any, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) return res.status(400).json({ error: "Topic query is required" });
+    const plan = await getSmartGoalPlan(req.userId, topic);
+    res.json({ plan });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to plan goal" });
+  }
+});
+
+// AI Roadmap
+app.post("/api/ai/roadmap", authenticate, async (req: any, res) => {
+  try {
+    const { track } = req.body;
+    if (!track) return res.status(400).json({ error: "Roadmap track parameter is required (e.g. DevOps)" });
+    const plan = await getRoadmapPlan(req.userId, track);
+    res.json({ plan });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to build roadmap" });
+  }
+});
+
+// AI Project Ideas
+app.post("/api/ai/project", authenticate, async (req: any, res) => {
+  try {
+    const { goalsQuery } = req.body;
+    if (!goalsQuery) return res.status(400).json({ error: "Goals context query is required" });
+    const plan = await getProjectIdeas(req.userId, goalsQuery);
+    res.json({ plan });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate portfolio projects" });
+  }
+});
+
+// Mock interview
+app.post("/api/ai/mock-interview", authenticate, async (req: any, res) => {
+  try {
+    const { skillName } = req.body;
+    if (!skillName) return res.status(400).json({ error: "skillName is required" });
+    const questionsText = await getMockInterview(req.userId, skillName);
+    res.json({ questions: questionsText });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate interview questions" });
+  }
+});
+
+// Skill gap analysis
+app.post("/api/ai/skill-gap", authenticate, async (req: any, res) => {
+  try {
+    const { desiredRole } = req.body;
+    if (!desiredRole) return res.status(400).json({ error: "desiredRole is required" });
+    const userSkills = db.skills.filter(s => s.userId === req.userId).map(s => s.skillName);
+    const analysis = await getSkillGapAnalysis(req.userId, desiredRole, userSkills);
+    res.json({ analysis });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to perform gap analysis" });
+  }
+});
+
+// Resume prep
+app.get("/api/ai/resume-helper", authenticate, async (req: any, res) => {
+  try {
+    const data = {
+      projects: db.projects.filter(p => p.userId === req.userId),
+      skills: db.skills.filter(s => s.userId === req.userId)
+    };
+    const response = await getResumeAssistance(req.userId, data);
+    res.json({ recommendations: response });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate resume suggestions" });
+  }
+});
+
+// Habit advice
+app.get("/api/ai/habit-advisor", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      dailies: db.dailies.filter(d => d.userId === req.userId)
+    };
+    const recommendations = await getHabitImprovementAdvisor(req.userId, data, insights);
+    res.json({ recommendations });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch habit tips" });
+  }
+});
+
+// Study Notes summary based on chapter ID
+app.post("/api/ai/study-notes", authenticate, async (req: any, res) => {
+  try {
+    const { chapterId } = req.body;
+    if (!chapterId) return res.status(400).json({ error: "chapterId is required" });
+    const chapter = db.chapters.find(c => c.id === chapterId && c.userId === req.userId);
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+
+    const notesSummary = await getStudyNotesSummary(req.userId, chapter);
+    res.json({ notesSummary });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to summarize study notes" });
+  }
+});
+
+// Project helper review
+app.post("/api/ai/project-reviewer", authenticate, async (req: any, res) => {
+  try {
+    const { projectId } = req.body;
+    if (!projectId) return res.status(400).json({ error: "projectId is required" });
+    const project = db.projects.find(p => p.id === projectId && p.userId === req.userId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const tasks = db.projectTasks.filter(pt => pt.projectId === projectId);
+    const review = await getProjectReview(req.userId, project, tasks);
+    res.json({ review });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to audit project progress" });
+  }
+});
+
+// Burnout advice
+app.get("/api/ai/burnout-coach", authenticate, async (req: any, res) => {
+  try {
+    const insights = getInsightsContext(req.userId);
+    const recommendations = await getBurnoutAdvice(req.userId, insights);
+    res.json({ recommendations });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch burnout assistance" });
+  }
+});
+
+// Conversational Coach chat
+app.post("/api/ai/chat", authenticate, async (req: any, res) => {
+  try {
+    const { query, history } = req.body;
+    if (!query) return res.status(400).json({ error: "User message query is required" });
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      projects: db.projects
+    };
+    const response = await getChatResponse(req.userId, data, insights, history || [], query);
+    res.json({ response });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Chat failed" });
+  }
+});
+
+// Natural language search endpoint
+app.post("/api/ai/search", authenticate, async (req: any, res) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Natural language query is required" });
+    const insights = getInsightsContext(req.userId);
+    const data = {
+      goals: db.goals,
+      tasks: db.tasks,
+      skills: db.skills,
+      courses: db.courses,
+      projects: db.projects,
+      dailies: db.dailies
+    };
+    const results = performNaturalSearch(req.userId, query, data, insights);
+    res.json(results);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Natural Search failed" });
+  }
+});
+
+// Notification generator
+app.post("/api/ai/notification-gen", authenticate, async (req: any, res) => {
+  try {
+    const { itemName, type } = req.body;
+    if (!itemName) return res.status(400).json({ error: "itemName is required" });
+    const content = await getAINotificationContent(itemName, type || "task");
+    res.json({ content });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate notification body" });
+  }
+});
+
+// Import entities (Smart Import pipeline!)
+app.post("/api/ai/import-entities", authenticate, async (req: any, res) => {
+  try {
+    const { goals, skills, tasks, project } = req.body;
+    const createdGoals: any[] = [];
+    const timestamp = new Date().toISOString();
+
+    // 1. Create Goals & map their temporary references
+    if (goals && Array.isArray(goals)) {
+      for (const g of goals) {
+        const goalId = "goal_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+        const newGoal = {
+          id: goalId,
+          userId: req.userId,
+          title: g.title,
+          description: g.description || "Auto-imported by Qwen AI Assistant.",
+          targetDate: g.targetDate || new Date(Date.now() + (g.targetDays || 30) * 24 * 3600 * 1000).toISOString().split("T")[0],
+          priority: g.priority || "High",
+          status: "In Progress" as const,
+          progressPercentage: 0
+        };
+        db.goals.push(newGoal);
+        createdGoals.push(newGoal);
+
+        // Also create any associated tasks if they are child tasks
+        if (tasks && Array.isArray(tasks)) {
+          for (const t of tasks) {
+            db.tasks.push({
+              id: "task_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+              goalId: goalId,
+              userId: req.userId,
+              title: t.title,
+              description: t.description || "",
+              dueDate: t.dueDate || newGoal.targetDate,
+              priority: t.priority || "Medium",
+              progressPercentage: 0,
+              completed: false,
+              inProgress: false,
+              orderIndex: db.tasks.length
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Create isolated general goal skills
+    if (skills && Array.isArray(skills)) {
+      const associatedGoalId = createdGoals.length > 0 ? createdGoals[0].id : "";
+      for (const skName of skills) {
+        db.skills.push({
+          id: "skill_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          goalId: associatedGoalId,
+          userId: req.userId,
+          skillName: skName,
+          confidenceLevel: 1,
+          status: "Learning",
+          notes: "Generated by DevOps AI Roadmap Assistant",
+          resourceUrl: ""
+        });
+      }
+    }
+
+    // 3. Create standalone project & subtasks
+    if (project) {
+      const projId = "project_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+      const newProj = {
+        id: projId,
+        userId: req.userId,
+        title: project.title,
+        description: project.description || "Portfolio project recommended by AI Coach.",
+        status: "Planning" as const,
+        progressPercentage: 0,
+        repositoryUrl: "",
+        liveDemoUrl: ""
+      };
+      db.projects.push(newProj);
+
+      if (project.tasks && Array.isArray(project.tasks)) {
+        for (const t of project.tasks) {
+          db.projectTasks.push({
+            id: "ptask_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+            projectId: projId,
+            userId: req.userId,
+            title: t.title,
+            description: t.description || "",
+            status: "Pending",
+            completed: false,
+            inProgress: false,
+            taskResourceUrl: "",
+            documentationUrl: "",
+            githubCommitUrl: "",
+            githubPrUrl: ""
+          });
+        }
+      }
+    }
+
+    // Log Activity
+    db.activities.push({
+      id: "act_" + Date.now(),
+      userId: req.userId,
+      activityType: "Completed AI Import",
+      description: "Successfully imported items from your AI Roadmap / Study Advisor plan.",
+      timestamp
+    });
+
+    // Save DB state and force instant analytics refresh
+    saveDb();
+    try {
+      const refreshed = calculateUserInsights(
+        req.userId,
+        db.goals,
+        db.tasks,
+        db.skills,
+        db.courses,
+        db.chapters,
+        db.projects,
+        db.projectTasks,
+        db.dailies,
+        db.activities,
+        db.moodLogs
+      );
+      db.analyticsCache[req.userId] = refreshed;
+    } catch (_) {}
+
+    res.json({ success: true, message: "Entities successfully imported into GoalTracker database!" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to complete AI auto-import sequence" });
+  }
+});
+
+// ==========================================
 
 
 // --- MAIN AND VITE DEV MIDDLEWARE HANDLER ---

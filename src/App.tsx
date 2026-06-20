@@ -8,6 +8,7 @@ import ProjectBoard from "./components/ProjectBoard";
 import DailiesPlanner from "./components/DailiesPlanner";
 import NotificationsCenter from "./components/NotificationsCenter";
 import InsightsDashboard from "./components/InsightsDashboard";
+import AICoachPanel from "./components/AICoachPanel";
 import {
   Flame,
   Target,
@@ -53,7 +54,7 @@ export default function App() {
   const [insights, setInsights] = useState<InsightsData | null>(null);
 
   // Navigation state
-  const [currentScreen, setCurrentScreen] = useState<"dashboard" | "goals" | "projects" | "habits" | "search" | "insights">("dashboard");
+  const [currentScreen, setCurrentScreen] = useState<"dashboard" | "goals" | "projects" | "habits" | "search" | "insights" | "ai-coach">("dashboard");
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -854,6 +855,16 @@ export default function App() {
               <Brain className="w-4 h-4" /> AI Insights
             </button>
             <button
+              onClick={() => setCurrentScreen("ai-coach")}
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                currentScreen === "ai-coach"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-slate-800 dark:text-indigo-400"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 dark:text-slate-350 dark:hover:bg-slate-800"
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-550 animate-pulse" /> AI Coach Room
+            </button>
+            <button
               onClick={() => setCurrentScreen("search")}
               className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                 currentScreen === "search"
@@ -934,11 +945,17 @@ export default function App() {
             >
               <Flame className="w-4 h-4 text-slate-500" /> Habit routines
             </button>
-            <button
+             <button
               onClick={() => { setCurrentScreen("insights"); setMobileMenuOpen(false); }}
               className="text-xs font-bold p-3 rounded-lg text-left hover:bg-slate-50 flex items-center gap-2"
             >
               <Brain className="w-4 h-4 text-slate-500" /> AI Insights
+            </button>
+            <button
+              onClick={() => { setCurrentScreen("ai-coach"); setMobileMenuOpen(false); }}
+              className="text-xs font-bold p-3 rounded-lg text-left hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" /> AI Coach Room
             </button>
             <button
               onClick={() => { setCurrentScreen("search"); setMobileMenuOpen(false); }}
@@ -1430,6 +1447,24 @@ export default function App() {
               courses={courses}
               chapters={chapters}
               projects={projects}
+            />
+          </div>
+        )}
+
+        {/* SCREEN 7: QWEN AI COACH PANEL MODULE */}
+        {currentScreen === "ai-coach" && (
+          <div className="animate-fadeIn">
+            <AICoachPanel
+              token={token}
+              goals={goals}
+              tasks={tasks}
+              skills={skills}
+              courses={courses}
+              chapters={chapters}
+              projects={projects}
+              projectTasks={projectTasks}
+              dailies={dailies}
+              syncData={syncApplicationData}
             />
           </div>
         )}
