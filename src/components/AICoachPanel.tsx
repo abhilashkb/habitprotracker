@@ -134,6 +134,29 @@ export default function AICoachPanel({
     setTimeout(() => setAlertMsg(null), 5000);
   };
 
+  // Render AI Output with Connection / Error states formatting
+  const renderAIContent = (text: string) => {
+    if (!text) return null;
+    if (text.startsWith("Error:") || text.startsWith("Error")) {
+      return (
+        <div className="p-5 bg-rose-50/70 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 rounded-2xl text-xs text-rose-700 dark:text-rose-400 space-y-2 animate-scaleUp">
+          <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[10px] text-rose-600 dark:text-rose-400 font-mono">
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            AI Service offline
+          </div>
+          <p className="whitespace-pre-line leading-relaxed font-semibold">
+            {text}
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="text-xs text-slate-755 dark:text-slate-300 leading-normal space-y-4 whitespace-pre-line font-medium leading-relaxed">
+        {text}
+      </div>
+    );
+  };
+
   // API Call general wrapper
   const fetchAIEndpoint = async (endpoint: string, method: "GET" | "POST" = "GET", body: any = null) => {
     if (!token) return null;
@@ -550,9 +573,7 @@ export default function AICoachPanel({
               </div>
 
               {dailySummary ? (
-                <div className="prose prose-sm dark:prose-invert text-xs text-slate-750 dark:text-slate-300 leading-normal space-y-4 whitespace-pre-line">
-                  {dailySummary}
-                </div>
+                renderAIContent(dailySummary)
               ) : (
                 <p className="text-xs text-slate-400 italic">No briefing compiled. Click Recalculate to generate.</p>
               )}
@@ -579,9 +600,7 @@ export default function AICoachPanel({
               </div>
 
               {coachReport ? (
-                <div className="prose prose-sm dark:prose-invert text-xs text-slate-750 dark:text-slate-300 leading-6 space-y-4 whitespace-pre-line">
-                  {coachReport}
-                </div>
+                renderAIContent(coachReport)
               ) : (
                 <div className="py-12 text-center text-slate-400 italic space-y-3">
                   <p className="text-xs">Initial loading of your simulated Qwen-2.5 advisor recommendations...</p>
@@ -652,9 +671,7 @@ export default function AICoachPanel({
                 <p>Generating simulated Qwen-2.5 high-performance summary review...</p>
               </div>
             ) : reviewContent ? (
-              <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-relaxed whitespace-pre-line p-4 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-slate-50 dark:border-slate-850">
-                {reviewContent}
-              </div>
+              renderAIContent(reviewContent)
             ) : (
               <div className="py-10 text-center text-slate-400 text-xs italic">
                 <p>No active performance log requested yet. Select a review period above to generate.</p>
@@ -845,10 +862,7 @@ export default function AICoachPanel({
                 </div>
 
                 {generatedPlan ? (
-                  <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-6 space-y-4 whitespace-pre-wrap">
-                    {/* Filter out JSON blocks for pristine visual presentation */}
-                    {generatedPlan.split("===IMPORTABLE_DATA===")[0]}
-                  </div>
+                  renderAIContent(generatedPlan.split("===IMPORTABLE_DATA===")[0])
                 ) : (
                   <div className="py-20 text-center text-slate-400 text-xs italic space-y-2">
                     <Brain className="w-8 h-8 mx-auto text-slate-300 mb-2" />
@@ -921,9 +935,7 @@ export default function AICoachPanel({
 
           {interviewOutput ? (
             <div className="space-y-6">
-              <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-6 space-y-4 whitespace-pro-wrap p-5 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-slate-50 dark:border-slate-850">
-                {interviewOutput.split("===IMPORTABLE_DATA===")[0]}
-              </div>
+              {renderAIContent(interviewOutput.split("===IMPORTABLE_DATA===")[0])}
 
               {importableData && (
                 <div className="p-4 bg-indigo-50/50 dark:bg-slate-950/40 border border-indigo-100/50 dark:border-slate-850 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -983,9 +995,7 @@ export default function AICoachPanel({
           </div>
 
           {gapOutput ? (
-            <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-relaxed whitespace-pre-wrap p-5 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-slate-50 dark:border-slate-850">
-              {gapOutput}
-            </div>
+            renderAIContent(gapOutput)
           ) : (
             <div className="py-20 text-center text-slate-400 text-xs italic space-y-2">
               <Sparkles className="w-8 h-8 mx-auto text-slate-300 mb-2 animate-bounce" />
@@ -1013,9 +1023,7 @@ export default function AICoachPanel({
               </div>
 
               {resumeAdvice ? (
-                <div className="prose prose-sm dark:prose-invert text-xs text-slate-750 dark:text-slate-300 leading-6 space-y-3 whitespace-pre-line">
-                  {resumeAdvice}
-                </div>
+                renderAIContent(resumeAdvice)
               ) : (
                 <div className="py-12 text-center text-slate-400 text-xs italic space-y-3">
                   <p>Check quantifiable descriptors generated from your finalized portfolio projects.</p>
@@ -1056,9 +1064,7 @@ export default function AICoachPanel({
               </div>
 
               {habitAdvice ? (
-                <div className="prose prose-sm dark:prose-invert text-xs text-slate-750 dark:text-slate-300 leading-6 space-y-3 whitespace-pre-line">
-                  {habitAdvice}
-                </div>
+                renderAIContent(habitAdvice)
               ) : (
                 <div className="py-12 text-center text-slate-400 text-xs italic space-y-3">
                   <p>Optimize your habit completion routines using study logs failure risks indicators patterns.</p>
@@ -1131,8 +1137,8 @@ export default function AICoachPanel({
             </div>
 
             {chapterSummaryOutput && (
-              <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-6 space-y-4 whitespace-pre-wrap p-5 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-slate-50 dark:border-slate-850 max-h-[380px] overflow-y-auto">
-                {chapterSummaryOutput}
+              <div className="bg-slate-50/50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-50 dark:border-slate-850 max-h-[380px] overflow-y-auto">
+                {renderAIContent(chapterSummaryOutput)}
               </div>
             )}
           </div>
@@ -1177,8 +1183,8 @@ export default function AICoachPanel({
             </div>
 
             {projectAuditOutput && (
-              <div className="prose prose-sm dark:prose-invert text-xs text-slate-755 dark:text-slate-300 leading-6 space-y-4 whitespace-pre-wrap p-5 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-slate-50 dark:border-slate-850 max-h-[380px] overflow-y-auto">
-                {projectAuditOutput}
+              <div className="bg-slate-50/50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-50 dark:border-slate-850 max-h-[380px] overflow-y-auto">
+                {renderAIContent(projectAuditOutput)}
               </div>
             )}
           </div>
