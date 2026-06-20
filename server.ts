@@ -4,9 +4,11 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_FILE = process.env.DATABASE_PATH || path.resolve(__dirname, "db.json");
+const resolvedDirname = typeof __dirname !== "undefined"
+  ? __dirname
+  : path.dirname(fileURLToPath(import.meta.url));
+
+const DB_FILE = process.env.DATABASE_PATH || path.resolve(resolvedDirname, "db.json");
 
 // Ensure database directory exists
 const dbDir = path.dirname(DB_FILE);
@@ -1714,7 +1716,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // If in production mode, serve built files inside the dist directory
-    const distPath = path.resolve(__dirname, "dist");
+    const distPath = path.resolve(resolvedDirname, "dist");
     app.use(express.static(distPath));
     // Serve index.html globally as fallback for client-side routing
     app.get("*", (req, res) => {
