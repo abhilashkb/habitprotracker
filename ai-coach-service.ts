@@ -85,6 +85,57 @@ async function callQwenEngine(systemPrompt: string, userPrompt: string, cacheKey
     console.log(`[AI Coach Cache] Refresh requested. Bypassing cached data for key: ${cacheKey}`);
   }
 
+  // Support local Ollama or OpenAI-Compatible Docker services
+  const localURL = process.env.LOCAL_AI_MODEL_URL;
+  if (localURL) {
+    try {
+      const modelName = process.env.LOCAL_AI_MODEL_NAME || "qwen2.5:1.5b";
+      console.log(`[AI Coach Engine] Sending request to local AI at URL: ${localURL} using model: ${modelName}...`);
+      
+      const payload: any = {
+        model: modelName,
+        prompt: userPrompt,
+        system: systemPrompt,
+        stream: false,
+      };
+
+      // Support OpenAI Chat completions payload format if URL contains v1/chat or completions
+      const isOpenAIFormat = localURL.includes("/v1/chat") || localURL.includes("/completions");
+      if (isOpenAIFormat) {
+        payload.messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ];
+      }
+
+      const response = await (globalThis as any).fetch(localURL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Local AI request failed with HTTP status ${response.status}`);
+      }
+
+      const resJson = await response.json() as any;
+      const text = resJson.response || resJson.choices?.[0]?.message?.content || resJson.text;
+      
+      if (text) {
+        console.log(`[AI Coach Engine] Received response from local AI container (${modelName}): ${text.substring(0, 50)}...`);
+        if (cacheKey) setCached(cacheKey, text);
+        return text;
+      } else {
+        throw new Error(`Unexpected structure in local AI response: ${JSON.stringify(resJson)}`);
+      }
+    } catch (e: any) {
+      console.error("[AI Coach Engine] Local AI container request failed:", e.message || e);
+      console.log("[AI Coach Engine] Moving to Gemini fallback or local heuristics compiler.");
+    }
+  }
+
   if (ai) {
     try {
       console.log("[AI Coach Engine] Sending request to Gemini-3.5-Flash (Qwen personality context)...");
