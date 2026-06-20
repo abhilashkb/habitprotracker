@@ -1716,7 +1716,9 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // If in production mode, serve built files inside the dist directory
-    const distPath = path.resolve(resolvedDirname, "dist");
+    const distPath = resolvedDirname.endsWith("dist")
+      ? resolvedDirname
+      : path.resolve(resolvedDirname, "dist");
     app.use(express.static(distPath));
     // Serve index.html globally as fallback for client-side routing
     app.get("*", (req, res) => {
