@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: goaltracker_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_PATH=/app/data/db.json
+      # - GEMINI_API_KEY=your_actual_gemini_api_key_here
+    volumes:
+      - goaltracker_data:/app/data
+
+volumes:
+  goaltracker_data:
+    driver: local
