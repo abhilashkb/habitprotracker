@@ -71,13 +71,17 @@ try {
 }
 
 // Ensure clean prompt generation helper
-async function callQwenEngine(systemPrompt: string, userPrompt: string, cacheKey?: string): Promise<string> {
-  if (cacheKey) {
+async function callQwenEngine(systemPrompt: string, userPrompt: string, cacheKey?: string, refresh = false): Promise<string> {
+  if (cacheKey && !refresh) {
     const cached = getCached(cacheKey);
     if (cached) {
       console.log(`[AI Coach Cache] Cache HIT for key: ${cacheKey}`);
       return cached;
     }
+  }
+
+  if (refresh && cacheKey) {
+    console.log(`[AI Coach Cache] Refresh requested. Bypassing cached data for key: ${cacheKey}`);
   }
 
   if (ai) {
@@ -260,7 +264,7 @@ Summarize overall professional achievements over the monthly cycle in 3 scannabl
 }
 
 // 5. SMART GOAL PLANNING
-export async function getSmartGoalPlan(userId: string, userQuery: string): Promise<string> {
+export async function getSmartGoalPlan(userId: string, userQuery: string, refresh = false): Promise<string> {
   const userPrompt = `The user is requesting a custom plan for: "${userQuery}".
 Act as their Senior Mentor and Tech Lead. Describe a realistic, highly professional study plan outlining weeks/milestones, estimated duration, key recommended tools, and how to track this on GoalTracker.
 
@@ -284,11 +288,11 @@ At the absolute end, you must output a structured JSON blocks for direct user im
 
 Keep the markdown highly polished, and make the JSON strictly compliant with double quotes. Do not include any invalid controls.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `plan_${userQuery.replace(/\s+/g, '_')}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `plan_${userId}_${userQuery.replace(/\s+/g, '_')}`, refresh);
 }
 
 // 6. AI ROADMAP GENERATOR
-export async function getRoadmapPlan(userId: string, track: string): Promise<string> {
+export async function getRoadmapPlan(userId: string, track: string, refresh = false): Promise<string> {
   const userPrompt = `The user wants to generate a complete learning roadmap for track: "${track}".
 Compose an immersive, high-impact career guide in markdown. Discuss common entry barriers, core concepts to conquer, and suggested real-world mock projects.
 
@@ -311,11 +315,11 @@ At the absolute end of the message, write the exact schema for direct auto-impor
 }
 ===END===`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `roadmap_${track.replace(/\s+/g, '_')}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `roadmap_${userId}_${track.replace(/\s+/g, '_')}`, refresh);
 }
 
 // 7. AI PROJECT GENERATOR
-export async function getProjectIdeas(userId: string, goalsQuery: string): Promise<string> {
+export async function getProjectIdeas(userId: string, goalsQuery: string, refresh = false): Promise<string> {
   const userPrompt = `Generate hands-on Project ideas targeting interest/goals: "${goalsQuery}".
 Describe 2 custom, portfolio-ready project concepts with:
 - Project Title
@@ -338,11 +342,11 @@ At the final line, provide the IMPORTABLE payload:
 }
 ===END===`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `project_${goalsQuery.replace(/\s+/g, '_')}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `project_${userId}_${goalsQuery.replace(/\s+/g, '_')}`, refresh);
 }
 
 // 8. MOCK INTERVIEW PREPARATION
-export async function getMockInterview(userId: string, skillName: string): Promise<string> {
+export async function getMockInterview(userId: string, skillName: string, refresh = false): Promise<string> {
   const userPrompt = `Generate highly accurate Mock Interview Prep Questions for skill: "${skillName}".
 Provide 3 structured questions (1 Beginner, 1 Intermediate, 1 Advanced) along with the optimal answers and core keywords that engineering interviewers look for.
 
@@ -359,17 +363,17 @@ At the very bottom, include this JSON payload to easily save them as tasks:
 }
 ===END===`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `interview_${skillName.replace(/\s+/g, '_')}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `interview_${userId}_${skillName.replace(/\s+/g, '_')}`, refresh);
 }
 
 // 9. SKILL GAP ANALYSIS
-export async function getSkillGapAnalysis(userId: string, desiredRole: string, currentSkList: string[]): Promise<string> {
+export async function getSkillGapAnalysis(userId: string, desiredRole: string, currentSkList: string[], refresh = false): Promise<string> {
   const userPrompt = `Desired Career Target Role: "${desiredRole}"
 Current User-Gained Skills: ${JSON.stringify(currentSkList)}
 
 Map current skills against the benchmark market demands for ${desiredRole}. Identify 3 clear missing/immature competencies. Generate an action plan (with concrete timeline milestones and syllabus guides) to close these skill gaps.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `gap_${desiredRole.replace(/\s+/g, '_')}_${currentSkList.length}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `gap_${userId}_${desiredRole.replace(/\s+/g, '_')}_${currentSkList.length}`, refresh);
 }
 
 // 10. RESUME PREPARATION ASSISTANT

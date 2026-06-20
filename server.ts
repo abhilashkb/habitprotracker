@@ -2014,9 +2014,9 @@ app.get("/api/ai/monthly-review", authenticate, async (req: any, res) => {
 // Smart Goal planning
 app.post("/api/ai/plan-goal", authenticate, async (req: any, res) => {
   try {
-    const { topic } = req.body;
+    const { topic, refresh } = req.body;
     if (!topic) return res.status(400).json({ error: "Topic query is required" });
-    const plan = await getSmartGoalPlan(req.userId, topic);
+    const plan = await getSmartGoalPlan(req.userId, topic, refresh === true || req.query.refresh === "true");
     res.json({ plan });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to plan goal" });
@@ -2026,9 +2026,9 @@ app.post("/api/ai/plan-goal", authenticate, async (req: any, res) => {
 // AI Roadmap
 app.post("/api/ai/roadmap", authenticate, async (req: any, res) => {
   try {
-    const { track } = req.body;
+    const { track, refresh } = req.body;
     if (!track) return res.status(400).json({ error: "Roadmap track parameter is required (e.g. DevOps)" });
-    const plan = await getRoadmapPlan(req.userId, track);
+    const plan = await getRoadmapPlan(req.userId, track, refresh === true || req.query.refresh === "true");
     res.json({ plan });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to build roadmap" });
@@ -2038,9 +2038,9 @@ app.post("/api/ai/roadmap", authenticate, async (req: any, res) => {
 // AI Project Ideas
 app.post("/api/ai/project", authenticate, async (req: any, res) => {
   try {
-    const { goalsQuery } = req.body;
+    const { goalsQuery, refresh } = req.body;
     if (!goalsQuery) return res.status(400).json({ error: "Goals context query is required" });
-    const plan = await getProjectIdeas(req.userId, goalsQuery);
+    const plan = await getProjectIdeas(req.userId, goalsQuery, refresh === true || req.query.refresh === "true");
     res.json({ plan });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to generate portfolio projects" });
@@ -2050,9 +2050,9 @@ app.post("/api/ai/project", authenticate, async (req: any, res) => {
 // Mock interview
 app.post("/api/ai/mock-interview", authenticate, async (req: any, res) => {
   try {
-    const { skillName } = req.body;
+    const { skillName, refresh } = req.body;
     if (!skillName) return res.status(400).json({ error: "skillName is required" });
-    const questionsText = await getMockInterview(req.userId, skillName);
+    const questionsText = await getMockInterview(req.userId, skillName, refresh === true || req.query.refresh === "true");
     res.json({ questions: questionsText });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to generate interview questions" });
@@ -2062,10 +2062,10 @@ app.post("/api/ai/mock-interview", authenticate, async (req: any, res) => {
 // Skill gap analysis
 app.post("/api/ai/skill-gap", authenticate, async (req: any, res) => {
   try {
-    const { desiredRole } = req.body;
+    const { desiredRole, refresh } = req.body;
     if (!desiredRole) return res.status(400).json({ error: "desiredRole is required" });
     const userSkills = db.skills.filter(s => s.userId === req.userId).map(s => s.skillName);
-    const analysis = await getSkillGapAnalysis(req.userId, desiredRole, userSkills);
+    const analysis = await getSkillGapAnalysis(req.userId, desiredRole, userSkills, refresh === true || req.query.refresh === "true");
     res.json({ analysis });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to perform gap analysis" });

@@ -217,7 +217,7 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setGeneratedPlan("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/roadmap", "POST", { track: roadmapTrack });
+    const data = await fetchAIEndpoint("/api/ai/roadmap", "POST", { track: roadmapTrack, refresh: true });
     if (data && data.plan) {
       setGeneratedPlan(data.plan);
       extractImportableData(data.plan);
@@ -231,7 +231,7 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setGeneratedPlan("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/plan-goal", "POST", { topic: targetQuery });
+    const data = await fetchAIEndpoint("/api/ai/plan-goal", "POST", { topic: targetQuery, refresh: true });
     if (data && data.plan) {
       setGeneratedPlan(data.plan);
       extractImportableData(data.plan);
@@ -245,7 +245,7 @@ export default function AICoachPanel({
     setGeneratedPlan("");
     setImportableData(null);
     const query = goals.length > 0 ? goals.map((g) => g.title).join(", ") : "Cloud native engineer";
-    const data = await fetchAIEndpoint("/api/ai/project", "POST", { goalsQuery: query });
+    const data = await fetchAIEndpoint("/api/ai/project", "POST", { goalsQuery: query, refresh: true });
     if (data && data.plan) {
       setGeneratedPlan(data.plan);
       extractImportableData(data.plan);
@@ -262,7 +262,7 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setInterviewOutput("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/mock-interview", "POST", { skillName: selectedSkillForInterview });
+    const data = await fetchAIEndpoint("/api/ai/mock-interview", "POST", { skillName: selectedSkillForInterview, refresh: true });
     if (data && data.questions) {
       setInterviewOutput(data.questions);
       extractImportableData(data.questions);
@@ -274,7 +274,7 @@ export default function AICoachPanel({
   const runSkillGapAnalysis = async () => {
     setLoadingAction(true);
     setGapOutput("");
-    const data = await fetchAIEndpoint("/api/ai/skill-gap", "POST", { desiredRole });
+    const data = await fetchAIEndpoint("/api/ai/skill-gap", "POST", { desiredRole, refresh: true });
     if (data && data.analysis) {
       setGapOutput(data.analysis);
     }
