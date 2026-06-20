@@ -155,7 +155,7 @@ export default function AICoachPanel({
     } catch (e: any) {
       console.error(`AI Fetch error [${endpoint}]:`, e);
       triggerAlert(e.message || "Endpoint connection failed.", "error");
-      return null;
+      return { error: e.message || "Endpoint connection failed." };
     }
   };
 
@@ -164,8 +164,12 @@ export default function AICoachPanel({
     if (!token) return;
     setLoadingCoach(true);
     const data = await fetchAIEndpoint(refresh ? "/api/ai/coach?refresh=true" : "/api/ai/coach");
-    if (data && data.report) {
-      setCoachReport(data.report);
+    if (data) {
+      if (data.error) {
+        setCoachReport(`Error: AI Coach is not connected.\nDetails: ${data.error}`);
+      } else if (data.report) {
+        setCoachReport(data.report);
+      }
     }
     setLoadingCoach(false);
   };
@@ -175,8 +179,12 @@ export default function AICoachPanel({
     if (!token) return;
     setLoadingDaily(true);
     const data = await fetchAIEndpoint(refresh ? "/api/ai/daily-summary?refresh=true" : "/api/ai/daily-summary");
-    if (data && data.summary) {
-      setDailySummary(data.summary);
+    if (data) {
+      if (data.error) {
+        setDailySummary(`Error: AI summary is unavailable.\nDetails: ${data.error}`);
+      } else if (data.summary) {
+        setDailySummary(data.summary);
+      }
     }
     setLoadingDaily(false);
   };
@@ -189,7 +197,11 @@ export default function AICoachPanel({
     const path = mode === "weekly" ? "/api/ai/weekly-review" : mode === "monthly" ? "/api/ai/monthly-review" : "/api/ai/burnout-coach";
     const data = await fetchAIEndpoint(path);
     if (data) {
-      setReviewContent(data.review || data.recommendations || "Empty review compiled.");
+      if (data.error) {
+        setReviewContent(`Error: AI review failed to generate.\nDetails: ${data.error}`);
+      } else {
+        setReviewContent(data.review || data.recommendations || "Empty review compiled.");
+      }
     }
     setLoadingReview(false);
   };
@@ -206,8 +218,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     const historyPayload = chatLog.slice(-10); // send last 10 messages context
     const data = await fetchAIEndpoint("/api/ai/chat", "POST", { query: userMsg, history: historyPayload });
-    if (data && data.response) {
-      setChatLog((prev) => [...prev, { role: "coach", text: data.response }]);
+    if (data) {
+      if (data.error) {
+        setChatLog((prev) => [...prev, { role: "coach", text: `Error: Chat offline.\nDetails: ${data.error}` }]);
+      } else if (data.response) {
+        setChatLog((prev) => [...prev, { role: "coach", text: data.response }]);
+      }
     }
     setLoadingAction(false);
   };
@@ -218,9 +234,13 @@ export default function AICoachPanel({
     setGeneratedPlan("");
     setImportableData(null);
     const data = await fetchAIEndpoint("/api/ai/roadmap", "POST", { track: roadmapTrack, refresh: true });
-    if (data && data.plan) {
-      setGeneratedPlan(data.plan);
-      extractImportableData(data.plan);
+    if (data) {
+      if (data.error) {
+        setGeneratedPlan(`Error: Failed to build learning roadmap.\nDetails: ${data.error}`);
+      } else if (data.plan) {
+        setGeneratedPlan(data.plan);
+        extractImportableData(data.plan);
+      }
     }
     setLoadingAction(false);
   };
@@ -232,9 +252,13 @@ export default function AICoachPanel({
     setGeneratedPlan("");
     setImportableData(null);
     const data = await fetchAIEndpoint("/api/ai/plan-goal", "POST", { topic: targetQuery, refresh: true });
-    if (data && data.plan) {
-      setGeneratedPlan(data.plan);
-      extractImportableData(data.plan);
+    if (data) {
+      if (data.error) {
+        setGeneratedPlan(`Error: Failed to structure study plan.\nDetails: ${data.error}`);
+      } else if (data.plan) {
+        setGeneratedPlan(data.plan);
+        extractImportableData(data.plan);
+      }
     }
     setLoadingAction(false);
   };
@@ -246,9 +270,13 @@ export default function AICoachPanel({
     setImportableData(null);
     const query = goals.length > 0 ? goals.map((g) => g.title).join(", ") : "Cloud native engineer";
     const data = await fetchAIEndpoint("/api/ai/project", "POST", { goalsQuery: query, refresh: true });
-    if (data && data.plan) {
-      setGeneratedPlan(data.plan);
-      extractImportableData(data.plan);
+    if (data) {
+      if (data.error) {
+        setGeneratedPlan(`Error: Failed to generate portfolio projects.\nDetails: ${data.error}`);
+      } else if (data.plan) {
+        setGeneratedPlan(data.plan);
+        extractImportableData(data.plan);
+      }
     }
     setLoadingAction(false);
   };
@@ -263,9 +291,13 @@ export default function AICoachPanel({
     setInterviewOutput("");
     setImportableData(null);
     const data = await fetchAIEndpoint("/api/ai/mock-interview", "POST", { skillName: selectedSkillForInterview, refresh: true });
-    if (data && data.questions) {
-      setInterviewOutput(data.questions);
-      extractImportableData(data.questions);
+    if (data) {
+      if (data.error) {
+        setInterviewOutput(`Error: Mock Interview Prep failed.\nDetails: ${data.error}`);
+      } else if (data.questions) {
+        setInterviewOutput(data.questions);
+        extractImportableData(data.questions);
+      }
     }
     setLoadingAction(false);
   };
@@ -275,8 +307,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setGapOutput("");
     const data = await fetchAIEndpoint("/api/ai/skill-gap", "POST", { desiredRole, refresh: true });
-    if (data && data.analysis) {
-      setGapOutput(data.analysis);
+    if (data) {
+      if (data.error) {
+        setGapOutput(`Error: Skill Gap Analysis failed.\nDetails: ${data.error}`);
+      } else if (data.analysis) {
+        setGapOutput(data.analysis);
+      }
     }
     setLoadingAction(false);
   };
@@ -286,8 +322,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setResumeAdvice("");
     const data = await fetchAIEndpoint("/api/ai/resume-helper");
-    if (data && data.recommendations) {
-      setResumeAdvice(data.recommendations);
+    if (data) {
+      if (data.error) {
+        setResumeAdvice(`Error: Resume assistance failed.\nDetails: ${data.error}`);
+      } else if (data.recommendations) {
+        setResumeAdvice(data.recommendations);
+      }
     }
     setLoadingAction(false);
   };
@@ -297,8 +337,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setHabitAdvice("");
     const data = await fetchAIEndpoint("/api/ai/habit-advisor");
-    if (data && data.recommendations) {
-      setHabitAdvice(data.recommendations);
+    if (data) {
+      if (data.error) {
+        setHabitAdvice(`Error: Habit analysis failed.\nDetails: ${data.error}`);
+      } else if (data.recommendations) {
+        setHabitAdvice(data.recommendations);
+      }
     }
     setLoadingAction(false);
   };
@@ -309,8 +353,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setChapterSummaryOutput("");
     const data = await fetchAIEndpoint("/api/ai/study-notes", "POST", { chapterId: selectedChapterId });
-    if (data && data.notesSummary) {
-      setChapterSummaryOutput(data.notesSummary);
+    if (data) {
+      if (data.error) {
+        setChapterSummaryOutput(`Error: Summarizing chapter notes failed.\nDetails: ${data.error}`);
+      } else if (data.notesSummary) {
+        setChapterSummaryOutput(data.notesSummary);
+      }
     }
     setLoadingAction(false);
   };
@@ -321,8 +369,12 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setProjectAuditOutput("");
     const data = await fetchAIEndpoint("/api/ai/project-reviewer", "POST", { projectId: selectedProjectId });
-    if (data && data.review) {
-      setProjectAuditOutput(data.review);
+    if (data) {
+      if (data.error) {
+        setProjectAuditOutput(`Error: Project audit failed.\nDetails: ${data.error}`);
+      } else if (data.review) {
+        setProjectAuditOutput(data.review);
+      }
     }
     setLoadingAction(false);
   };
