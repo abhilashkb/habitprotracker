@@ -64,12 +64,12 @@ export default function DailyQuotes({ quotes, onToggleFavorite }: DailyQuotesPro
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="quotes-container">
       {/* Primary Quote Slide Card */}
-      <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-md relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+      <div className="lg:col-span-2 bg-gradient-to-br from-indigo-50/70 to-white text-slate-800 border border-indigo-100 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[220px]">
         {/* Subtle Background Glow Vector */}
-        <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-center justify-between z-10">
-          <span className="text-[10px] uppercase tracking-wider font-mono bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full text-indigo-200">
+          <span className="text-[10px] uppercase tracking-wider font-mono bg-indigo-100/60 px-2.5 py-1 rounded-full text-indigo-705 font-bold">
             {activeQuote ? activeQuote.category : "Inspiration"}
           </span>
           <div className="flex items-center gap-1">
@@ -79,8 +79,8 @@ export default function DailyQuotes({ quotes, onToggleFavorite }: DailyQuotesPro
                 onClick={() => setSelectedCategory(cat)}
                 className={`text-[10px] px-2 py-0.5 rounded-md font-mono transition-colors ${
                   selectedCategory === cat
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white/5 hover:bg-white/15 text-slate-300"
+                    ? "bg-indigo-600 text-white font-semibold"
+                    : "bg-indigo-50/40 hover:bg-indigo-100/60 text-indigo-600"
                 }`}
               >
                 {cat}
@@ -92,41 +92,41 @@ export default function DailyQuotes({ quotes, onToggleFavorite }: DailyQuotesPro
         <div className={`my-5 transition-opacity duration-200 ${isAnimating ? "opacity-0" : "opacity-100"}`}>
           {activeQuote ? (
             <div className="flex gap-3">
-              <QuoteIcon className="w-8 h-8 text-indigo-400 opacity-40 shrink-0 transform -scale-x-100" />
+              <QuoteIcon className="w-8 h-8 text-indigo-400 opacity-30 shrink-0 transform -scale-x-100" />
               <div>
-                <p className="text-sm sm:text-base font-medium leading-relaxed font-sans text-slate-100 italic">
+                <p className="text-sm sm:text-base font-semibold leading-relaxed font-sans text-slate-800 italic">
                   "{activeQuote.quote}"
                 </p>
-                <p className="text-xs text-indigo-300 font-semibold mt-3 font-mono not-italic">
+                <p className="text-xs text-indigo-600 font-bold mt-3 font-mono not-italic">
                   — {activeQuote.author}
                 </p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-300">No quotes available in this category.</p>
+            <p className="text-sm text-slate-500">No quotes available in this category.</p>
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/10 pt-4 z-10">
+        <div className="flex items-center justify-between border-t border-indigo-100/80 pt-4 z-10">
           <div className="flex items-center gap-1.5">
             <button
               onClick={handlePrev}
               disabled={filteredQuotes.length <= 1}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              className="p-1.5 rounded-lg bg-indigo-50/50 hover:bg-indigo-100/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
               title="Previous quote"
             >
-              <ChevronLeft className="w-4 h-4 text-slate-200" />
+              <ChevronLeft className="w-4 h-4 text-indigo-600" />
             </button>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-[10px] font-mono text-slate-500 font-semibold">
               {filteredQuotes.length > 0 ? `${currentIndex + 1}/${filteredQuotes.length}` : "0/0"}
             </span>
             <button
               onClick={handleNext}
               disabled={filteredQuotes.length <= 1}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              className="p-1.5 rounded-lg bg-indigo-50/50 hover:bg-indigo-100/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
               title="Next quote"
             >
-              <ChevronRight className="w-4 h-4 text-slate-200" />
+              <ChevronRight className="w-4 h-4 text-indigo-600" />
             </button>
           </div>
 
@@ -136,12 +136,12 @@ export default function DailyQuotes({ quotes, onToggleFavorite }: DailyQuotesPro
                 onClick={() => onToggleFavorite(activeQuote.id)}
                 className={`p-2 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   activeQuote.isFavorite
-                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                    : "bg-white/5 hover:bg-white/10 text-slate-300"
+                    ? "bg-rose-50 text-rose-500 border border-rose-100"
+                    : "bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-600"
                 }`}
                 title={activeQuote.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
               >
-                <Heart className={`w-4 h-4 ${activeQuote.isFavorite ? "fill-rose-400 text-rose-300" : ""}`} />
+                <Heart className={`w-4 h-4 ${activeQuote.isFavorite ? "fill-rose-500 text-rose-500" : ""}`} />
                 {activeQuote.isFavorite ? "Saved" : "Save"}
               </button>
             )}
