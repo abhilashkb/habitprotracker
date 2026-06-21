@@ -77,6 +77,7 @@ export default function AICoachPanel({
   const [roadmapTrack, setRoadmapTrack] = useState("DevOps Engineer");
   const [generatedPlan, setGeneratedPlan] = useState<string>("");
   const [importableData, setImportableData] = useState<any | null>(null);
+  const [lastActionSource, setLastActionSource] = useState<"roadmap" | "plan" | "project" | null>(null);
 
   // Skill Interview / Gap Inputs
   const [selectedSkillForInterview, setSelectedSkillForInterview] = useState("");
@@ -252,11 +253,12 @@ export default function AICoachPanel({
   };
 
   // 5. Generate Roadmap Tracker
-  const generateRoadmap = async () => {
+  const generateRoadmap = async (refresh = false) => {
     setLoadingAction(true);
     setGeneratedPlan("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/roadmap", "POST", { track: roadmapTrack, refresh: true });
+    setLastActionSource("roadmap");
+    const data = await fetchAIEndpoint("/api/ai/roadmap", "POST", { track: roadmapTrack, refresh });
     if (data) {
       if (data.error) {
         setGeneratedPlan(`Error: Failed to build learning roadmap.\nDetails: ${data.error}`);
@@ -269,12 +271,13 @@ export default function AICoachPanel({
   };
 
   // 6. Generate Custom Goal Plan
-  const generateGoalPlan = async () => {
+  const generateGoalPlan = async (refresh = false) => {
     if (!targetQuery.trim()) return;
     setLoadingAction(true);
     setGeneratedPlan("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/plan-goal", "POST", { topic: targetQuery, refresh: true });
+    setLastActionSource("plan");
+    const data = await fetchAIEndpoint("/api/ai/plan-goal", "POST", { topic: targetQuery, refresh });
     if (data) {
       if (data.error) {
         setGeneratedPlan(`Error: Failed to structure study plan.\nDetails: ${data.error}`);
@@ -287,12 +290,13 @@ export default function AICoachPanel({
   };
 
   // 7. Generate Project Ideas
-  const generateProjects = async () => {
+  const generateProjects = async (refresh = false) => {
     setLoadingAction(true);
     setGeneratedPlan("");
     setImportableData(null);
+    setLastActionSource("project");
     const query = goals.length > 0 ? goals.map((g) => g.title).join(", ") : "Cloud native engineer";
-    const data = await fetchAIEndpoint("/api/ai/project", "POST", { goalsQuery: query, refresh: true });
+    const data = await fetchAIEndpoint("/api/ai/project", "POST", { goalsQuery: query, refresh });
     if (data) {
       if (data.error) {
         setGeneratedPlan(`Error: Failed to generate portfolio projects.\nDetails: ${data.error}`);
@@ -305,7 +309,7 @@ export default function AICoachPanel({
   };
 
   // 8. Generate Mock Interview preparation cards
-  const generateMockInterview = async () => {
+  const generateMockInterview = async (refresh = false) => {
     if (!selectedSkillForInterview) {
       triggerAlert("Declare at least one skill in GoalTracker first!", "error");
       return;
@@ -313,7 +317,7 @@ export default function AICoachPanel({
     setLoadingAction(true);
     setInterviewOutput("");
     setImportableData(null);
-    const data = await fetchAIEndpoint("/api/ai/mock-interview", "POST", { skillName: selectedSkillForInterview, refresh: true });
+    const data = await fetchAIEndpoint("/api/ai/mock-interview", "POST", { skillName: selectedSkillForInterview, refresh });
     if (data) {
       if (data.error) {
         setInterviewOutput(`Error: Mock Interview Prep failed.\nDetails: ${data.error}`);
@@ -326,10 +330,10 @@ export default function AICoachPanel({
   };
 
   // 9. Gap analysis trigger
-  const runSkillGapAnalysis = async () => {
+  const runSkillGapAnalysis = async (refresh = false) => {
     setLoadingAction(true);
     setGapOutput("");
-    const data = await fetchAIEndpoint("/api/ai/skill-gap", "POST", { desiredRole, refresh: true });
+    const data = await fetchAIEndpoint("/api/ai/skill-gap", "POST", { desiredRole, refresh });
     if (data) {
       if (data.error) {
         setGapOutput(`Error: Skill Gap Analysis failed.\nDetails: ${data.error}`);
@@ -854,11 +858,27 @@ export default function AICoachPanel({
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm min-h-[480px] flex flex-col justify-between">
               
               <div>
-                <div className="flex items-center justify-between pb-4 border-b border-slate-50 dark:border-slate-800/80 mb-4">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-50 dark:border-slate-800/80 mb-4 gap-2">
                   <h3 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                     Generated Roadmap Output Channel
                   </h3>
-                  {loadingAction && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {generatedPlan && lastActionSource && (
+                      <button
+                        onClick={() => {
+                          if (lastActionSource === "roadmap") generateRoadmap(true);
+                          else if (lastActionSource === "plan") generateGoalPlan(true);
+                          else if (lastActionSource === "project") generateProjects(true);
+                        }}
+                        disabled={loadingAction}
+                        className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-150 dark:border-slate-755 cursor-pointer disabled:opacity-50"
+                        title="Force recalculate and generate fresh output"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loadingAction ? "animate-spin" : ""}`} /> Recalculate
+                      </button>
+                    )}
+                    {loadingAction && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
+                  </div>
                 </div>
 
                 {generatedPlan ? (
@@ -934,7 +954,18 @@ export default function AICoachPanel({
           </div>
 
           {interviewOutput ? (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center justify-between pb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-wider">Interview Output Channel</span>
+                <button
+                  onClick={() => generateMockInterview(true)}
+                  disabled={loadingAction}
+                  className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-150 dark:border-slate-755 cursor-pointer disabled:opacity-50 font-sans"
+                  title="Force recalculate and generate fresh questions"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAction ? "animate-spin" : ""}`} /> Recalculate
+                </button>
+              </div>
               {renderAIContent(interviewOutput.split("===IMPORTABLE_DATA===")[0])}
 
               {importableData && (
@@ -995,7 +1026,20 @@ export default function AICoachPanel({
           </div>
 
           {gapOutput ? (
-            renderAIContent(gapOutput)
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center justify-between pb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-wider">Gap Analysis Output Channel</span>
+                <button
+                  onClick={() => runSkillGapAnalysis(true)}
+                  disabled={loadingAction}
+                  className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-150 dark:border-slate-755 cursor-pointer disabled:opacity-50 font-sans"
+                  title="Force recalculate and generate fresh gap analysis"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAction ? "animate-spin" : ""}`} /> Recalculate
+                </button>
+              </div>
+              {renderAIContent(gapOutput)}
+            </div>
           ) : (
             <div className="py-20 text-center text-slate-400 text-xs italic space-y-2">
               <Sparkles className="w-8 h-8 mx-auto text-slate-300 mb-2 animate-bounce" />
