@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { User, Goal, GoalTask, Skill, Course, Chapter, Project, ProjectTask, DailyTask, Activity, Quote, InsightsData } from "./types";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import DailyQuotes from "./components/DailyQuotes";
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import GoalConsole from "./components/GoalConsole";
 import ProjectBoard from "./components/ProjectBoard";
 import DailiesPlanner from "./components/DailiesPlanner";
@@ -970,9 +969,6 @@ export default function App() {
       {/* Main app body viewport window */}
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 flex-1 w-full relative">
         
-        {/* PWA installed shell diagnostic bar */}
-        <PWAInstallPrompt />
-
         {/* SCREEN 1: DASHBOARD HOME WIDGETS */}
         {currentScreen === "dashboard" && (
           <div className="space-y-6 animate-fadeIn" id="dashboard-layout">

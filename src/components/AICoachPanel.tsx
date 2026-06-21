@@ -68,9 +68,7 @@ export default function AICoachPanel({
 
   // Chat conversation
   const [chatInput, setChatInput] = useState("");
-  const [chatLog, setChatLog] = useState<{ role: "user" | "coach"; text: string }[]>([
-    { role: "coach", text: "Greetings! I am Qwen, your local Docker AI Productivity Coach. Ask me how to improve your interview confidence, analyze your current goals, or design a custom AWS/Kubernets study roadmap." }
-  ]);
+  const [chatLog, setChatLog] = useState<{ role: "user" | "coach"; text: string }[]>([]);
 
   // Planning / Roadmaps generator inputs
   const [targetQuery, setTargetQuery] = useState("");
@@ -699,22 +697,29 @@ export default function AICoachPanel({
           </div>
 
           <div className="h-[430px] overflow-y-auto bg-slate-50 dark:bg-slate-950/40 p-4 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-900 space-y-4">
-            {chatLog.map((chat, idx) => (
-              <div key={idx} className={`flex gap-3 max-w-4xl ${chat.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
-                <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold shadow-sm ${
-                  chat.role === "user" ? "bg-amber-100 dark:bg-amber-950/40 text-amber-600" : "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600"
-                }`}>
-                  {chat.role === "user" ? <User className="w-3.5 h-3.5" /> : <Brain className="w-3.5 h-3.5" />}
-                </div>
-                <div className={`p-4 rounded-2xl text-xs leading-relaxed space-y-2 max-w-2xl whitespace-pre-wrap ${
-                  chat.role === "user" 
-                    ? "bg-indigo-600 text-white rounded-tr-none" 
-                    : "bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-800"
-                }`}>
-                  {chat.text}
-                </div>
+            {chatLog.length === 0 ? (
+              <div className="py-20 text-center text-slate-400 text-xs italic space-y-2">
+                <Brain className="w-8 h-8 mx-auto text-slate-300 mb-2 animate-pulse" />
+                <p>Dialogue system initialized. Ask your career coach about goals, checklist items, or study paths.</p>
               </div>
-            ))}
+            ) : (
+              chatLog.map((chat, idx) => (
+                <div key={idx} className={`flex gap-3 max-w-4xl ${chat.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
+                  <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold shadow-sm ${
+                    chat.role === "user" ? "bg-amber-100 dark:bg-amber-950/40 text-amber-600" : "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600"
+                  }`}>
+                    {chat.role === "user" ? <User className="w-3.5 h-3.5" /> : <Brain className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className={`p-4 rounded-2xl text-xs leading-relaxed space-y-2 max-w-2xl whitespace-pre-wrap ${
+                    chat.role === "user" 
+                      ? "bg-indigo-600 text-white rounded-tr-none" 
+                      : "bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-800"
+                  }`}>
+                    {chat.text}
+                  </div>
+                </div>
+              ))
+            )}
             {loadingAction && (
               <div className="flex gap-3 max-w-lg mr-auto animate-pulse">
                 <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 shrink-0 flex items-center justify-center">
