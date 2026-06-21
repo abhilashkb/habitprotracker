@@ -300,7 +300,7 @@ Habits completion rates: ${JSON.stringify(insights.habitSuccess.map(h => ({ name
 
 Task: Generate 4 concise, bulleted coaching points summarizing their strengths, warning of specific roadblocks (e.g. slowed courses, missed tasks, skills requiring practice), and guiding their daily agenda. Provide specific, personalized insights in the style of a high-performance productivity coach. Do not mention system-internal files or technical details. Keep it tidy as markdown.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `coach_${userId}_${insights.lastUpdated}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `coach_${userId}`);
 }
 
 // 2. DAILY AI SUMMARY
@@ -324,7 +324,7 @@ We must follow this layout format strictly:
 ### Recommended Action
 *   [One single specific chapter or task completion item to run today]`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `daily_${userId}_${incompleteHighPriority.length}_${insights.lastUpdated}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `daily_${userId}`);
 }
 
 // 3. WEEKLY PERFORMANCE REVIEW
@@ -343,7 +343,7 @@ Recent project additions: ${JSON.stringify(data.projects.map((p: any) => ({ n: p
 
 Deliver a high-level performance retro. State exactly which courses made headway, highlight improved skill metrics, flag habits that were bypassed or skipped, and conclude with a motivating recommendation on study rhythm pacing. No lists of system paths.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `weekly_${userId}_${insights.lastUpdated}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `weekly_${userId}`);
 }
 
 // 4. MONTHLY LEARNING REVIEW
@@ -356,7 +356,7 @@ Active Skills: ${JSON.stringify(data.skills.map((s: any) => ({ name: s.skillName
 
 Summarize overall professional achievements over the monthly cycle in 3 scannable paragraphs. Highlight key milestones of finalized courses or project modules. Describe the skill growth trajectory and habits trends in standard narrative English (aiming to be far more expressive than raw lists/charts).`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `monthly_${userId}_${insights.lastUpdated}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `monthly_${userId}`);
 }
 
 // 5. SMART GOAL PLANNING
@@ -483,7 +483,7 @@ Mastered Skills: ${JSON.stringify(advancedSkills.map((s: any) => s.skillName))}
 
 Explain how to phrase these on their resume. Recommend exact ways to quantify outcomes (e.g., "Reduced latency by 15%", "Automated deployments across 3 zones"). Highlight which project points to push to the top. Keep in mind: suggest only, do not edit their file.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `resume_${userId}`);
 }
 
 // 11. HABIT IMPROVEMENT ADVISOR
@@ -496,7 +496,7 @@ Recent Mood correlation: ${insights.moodAnalytics?.correlationMessage || "No ste
 
 Identify 2-3 behavioral trends (e.g. routine failure trigger points, weekends peak study patterns, or Friday drops). Issue clear suggestions and optimal times for rescheduling task reminders to capture peak daily energy.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `habitadvisor_${userId}`);
 }
 
 // 12. STUDY NOTES ASSISTANT
@@ -534,7 +534,7 @@ Recommendations from calculations: ${JSON.stringify(insights.burnout.recommendat
 
 Expose a supportive, highly constructive Coaching feedback in warm narrative language. Detail the exact triggers pushing the stress levels, explain why the routine requires rest intervals, and list 3 restorative actions (e.g. postponing non-critical deadlines, declaring a study freeze day) to keep learning consistent without physical exhaustion.`;
 
-  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `burnout_${userId}_${insights.burnout.score}`);
+  return callQwenEngine(SYSTEM_INSTRUCTION_BASE, userPrompt, `burnout_${userId}`);
 }
 
 // 15. CONVERSATIONAL ASSISTANT & CHAT
