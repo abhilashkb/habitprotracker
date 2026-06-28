@@ -6,6 +6,11 @@ export interface User {
   timezone: string;
   preferredReminderTime: string;
   favoriteQuotes: string[];
+  telegramToken?: string;
+  telegramChatId?: string;
+  telegramEnabled?: boolean;
+  lastSentReminderDate?: string | null;
+  lastSentWarningDate?: string | null;
 }
 
 export interface Goal {

@@ -30,7 +30,8 @@ import {
   Menu,
   X,
   Bookmark,
-  Brain
+  Brain,
+  Send
 } from "lucide-react";
 
 export default function App() {
@@ -76,7 +77,75 @@ export default function App() {
     avatar: "",
     timezone: "",
     preferredReminderTime: "",
+    telegramToken: "",
+    telegramChatId: "",
+    telegramEnabled: false,
   });
+
+  // Telegram States & Callbacks
+  const [tgTestLoading, setTgTestLoading] = useState(false);
+  const [tgHabitsLoading, setTgHabitsLoading] = useState(false);
+  const [tgWarningLoading, setTgWarningLoading] = useState(false);
+  const [tgInsightsLoading, setTgInsightsLoading] = useState(false);
+  const [tgStatusMsg, setTgStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
+  const handleTelegramTest = async () => {
+    setTgTestLoading(true);
+    setTgStatusMsg(null);
+    try {
+      const res = await apiFetch("/api/telegram/test-connection", {
+        method: "POST",
+        body: JSON.stringify({
+          token: profileForm.telegramToken,
+          chatId: profileForm.telegramChatId,
+        }),
+      });
+      setTgStatusMsg({ text: res.message, isError: false });
+    } catch (err: any) {
+      setTgStatusMsg({ text: err.error || "Failed to send test message.", isError: true });
+    } finally {
+      setTgTestLoading(false);
+    }
+  };
+
+  const handleTelegramSendHabits = async () => {
+    setTgHabitsLoading(true);
+    setTgStatusMsg(null);
+    try {
+      const res = await apiFetch("/api/telegram/send-habits", { method: "POST" });
+      setTgStatusMsg({ text: res.message, isError: false });
+    } catch (err: any) {
+      setTgStatusMsg({ text: err.error || "Failed to send habits checklist.", isError: true });
+    } finally {
+      setTgHabitsLoading(false);
+    }
+  };
+
+  const handleTelegramSendWarning = async () => {
+    setTgWarningLoading(true);
+    setTgStatusMsg(null);
+    try {
+      const res = await apiFetch("/api/telegram/send-warning", { method: "POST" });
+      setTgStatusMsg({ text: res.message, isError: false });
+    } catch (err: any) {
+      setTgStatusMsg({ text: err.error || "Failed to send habits warning.", isError: true });
+    } finally {
+      setTgWarningLoading(false);
+    }
+  };
+
+  const handleTelegramSendInsights = async () => {
+    setTgInsightsLoading(true);
+    setTgStatusMsg(null);
+    try {
+      const res = await apiFetch("/api/telegram/send-insights", { method: "POST" });
+      setTgStatusMsg({ text: res.message, isError: false });
+    } catch (err: any) {
+      setTgStatusMsg({ text: err.error || "Failed to send daily AI insights.", isError: true });
+    } finally {
+      setTgInsightsLoading(false);
+    }
+  };
 
   // Base API configuration fetch helper
   const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
@@ -107,6 +176,9 @@ export default function App() {
         avatar: userProfile.avatar,
         timezone: userProfile.timezone,
         preferredReminderTime: userProfile.preferredReminderTime,
+        telegramToken: userProfile.telegramToken || "",
+        telegramChatId: userProfile.telegramChatId || "",
+        telegramEnabled: !!userProfile.telegramEnabled,
       });
 
       // Retrieve collections concurrently
@@ -1471,7 +1543,7 @@ export default function App() {
       {/* Profile Edit Settings dialogmodal popup */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl w-full max-w-sm animate-scaleUp">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl w-full max-w-md animate-scaleUp max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800 mb-4">
               <h3 className="text-sm font-extrabold text-slate-800 dark:text-white flex items-center gap-1.5 text-left">
@@ -1528,6 +1600,109 @@ export default function App() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              {/* Telegram Integration Section */}
+              <div className="border-t border-slate-100 dark:border-slate-850 pt-4 mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-sky-500" />
+                    Telegram Notifications
+                  </h4>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={profileForm.telegramEnabled}
+                      onChange={(e) => setProfileForm({ ...profileForm, telegramEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-8 h-4 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-slate-600 peer-checked:bg-sky-500"></div>
+                    <span className="ml-1.5 text-[10px] font-bold text-slate-500 uppercase dark:text-slate-400">
+                      {profileForm.telegramEnabled ? "On" : "Off"}
+                    </span>
+                  </label>
+                </div>
+
+                {profileForm.telegramEnabled && (
+                  <div className="space-y-3 animate-fadeIn">
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block mb-1">Telegram Bot Token</label>
+                      <input
+                        type="password"
+                        placeholder="e.g. 123456789:ABCdefGhI..."
+                        value={profileForm.telegramToken}
+                        onChange={(e) => setProfileForm({ ...profileForm, telegramToken: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block mb-1">Telegram Chat ID</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 987654321"
+                        value={profileForm.telegramChatId}
+                        onChange={(e) => setProfileForm({ ...profileForm, telegramChatId: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="bg-sky-50 dark:bg-sky-950/20 rounded-xl p-3 text-[10px] text-sky-700 dark:text-sky-300 leading-normal space-y-1">
+                      <p className="font-bold">Quick Setup Guide:</p>
+                      <p>1. Message <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="underline font-bold text-sky-600 dark:text-sky-400">@BotFather</a> to create a bot & copy the Token.</p>
+                      <p>2. Send a start/dummy message to your bot chat.</p>
+                      <p>3. Message <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="underline font-bold text-sky-600 dark:text-sky-400">@userinfobot</a> to find your numeric Chat ID.</p>
+                    </div>
+
+                    {/* Quick Trigger Control Actions */}
+                    <div className="space-y-2 pt-2 border-t border-dashed border-slate-150 dark:border-slate-800">
+                      <div className="flex items-center justify-between text-[10px] font-mono font-bold text-slate-400">
+                        <span>TEST & MANUAL SYNC TRIGGERS:</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleTelegramTest}
+                          disabled={tgTestLoading || !profileForm.telegramToken || !profileForm.telegramChatId}
+                          className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {tgTestLoading ? "Sending..." : "Test Bot Setup"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleTelegramSendHabits}
+                          disabled={tgHabitsLoading || !profileForm.telegramToken || !profileForm.telegramChatId}
+                          className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {tgHabitsLoading ? "Sending..." : "Send Habits List"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleTelegramSendWarning}
+                          disabled={tgWarningLoading || !profileForm.telegramToken || !profileForm.telegramChatId}
+                          className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {tgWarningLoading ? "Sending..." : "Send Streak Warn"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleTelegramSendInsights}
+                          disabled={tgInsightsLoading || !profileForm.telegramToken || !profileForm.telegramChatId}
+                          className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {tgInsightsLoading ? "Sending..." : "Send AI Insights"}
+                        </button>
+                      </div>
+
+                      {tgStatusMsg && (
+                        <div className={`p-2 rounded-lg text-[10px] leading-relaxed font-mono ${tgStatusMsg.isError ? "bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400" : "bg-green-50 text-green-600 dark:bg-green-950/20 dark:text-green-400"}`}>
+                          {tgStatusMsg.text}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

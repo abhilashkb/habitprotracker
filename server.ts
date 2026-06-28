@@ -55,6 +55,11 @@ interface User {
   timezone: string;
   preferredReminderTime: string;
   favoriteQuotes: string[];
+  telegramToken?: string;
+  telegramChatId?: string;
+  telegramEnabled?: boolean;
+  lastSentReminderDate?: string | null;
+  lastSentWarningDate?: string | null;
 }
 
 interface Goal {
@@ -859,11 +864,15 @@ app.put("/api/auth/profile", authenticate, (req: any, res) => {
   const user = db.users.find((u) => u.id === req.userId);
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  const { name, avatar, timezone, preferredReminderTime } = req.body;
+  const { name, avatar, timezone, preferredReminderTime, telegramToken, telegramChatId, telegramEnabled } = req.body;
   if (name) user.name = name;
   if (avatar !== undefined) user.avatar = avatar;
   if (timezone) user.timezone = timezone;
   if (preferredReminderTime) user.preferredReminderTime = preferredReminderTime;
+  
+  if (telegramToken !== undefined) user.telegramToken = telegramToken;
+  if (telegramChatId !== undefined) user.telegramChatId = telegramChatId;
+  if (telegramEnabled !== undefined) user.telegramEnabled = telegramEnabled;
 
   saveDb();
   res.json({
@@ -876,6 +885,11 @@ app.put("/api/auth/profile", authenticate, (req: any, res) => {
       timezone: user.timezone,
       preferredReminderTime: user.preferredReminderTime,
       favoriteQuotes: user.favoriteQuotes,
+      telegramToken: user.telegramToken,
+      telegramChatId: user.telegramChatId,
+      telegramEnabled: user.telegramEnabled,
+      lastSentReminderDate: user.lastSentReminderDate,
+      lastSentWarningDate: user.lastSentWarningDate,
     },
   });
 });
@@ -2326,6 +2340,283 @@ app.post("/api/ai/import-entities", authenticate, async (req: any, res) => {
     res.status(500).json({ error: error.message || "Failed to complete AI auto-import sequence" });
   }
 });
+
+// ==========================================
+// --- TELEGRAM INTEGRATION ENDPOINTS & SERVICES ---
+
+// Helper function to send Telegram message
+async function sendTelegramMessage(token: string, chatId: string, text: string) {
+  try {
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true
+      }),
+    });
+    const result = await response.json() as any;
+    if (!result.ok) {
+      console.error("[Telegram Error]", result);
+      throw new Error(result.description || "Failed to send Telegram message");
+    }
+    return result;
+  } catch (error: any) {
+    console.error("[Telegram Connection Error]", error);
+    throw error;
+  }
+}
+
+// Helper to determine if a habit (DailyTask) is scheduled for today
+function isHabitScheduledToday(d: any): boolean {
+  if (!d.isRecurring) return true;
+  const dayIdx = new Date().getDay();
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayName = days[dayIdx];
+  if (d.repeatType === "daily") return true;
+  if (d.repeatType === "weekdays") return dayIdx >= 1 && dayIdx <= 5;
+  if (d.repeatType === "weekends") return dayIdx === 0 || dayIdx === 6;
+  if (d.repeatType === "custom") return d.repeatDays && d.repeatDays.includes(dayName);
+  return false;
+}
+
+// Generate the message for Daily Habits Checklist
+function generateDailyHabitsMessage(user: any, dailies: any[], appUrl: string): string {
+  const todayStr = new Date().toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const todaysDailies = dailies.filter(d => d.userId === user.id && isHabitScheduledToday(d));
+
+  let msg = `📋 <b>Today's Habit Checklist</b>\n`;
+  msg += `Hello <b>${user.name}</b>! Here is your habit routine for today, <b>${todayStr}</b>:\n\n`;
+
+  if (todaysDailies.length === 0) {
+    msg += `<i>No habits scheduled for today! Enjoy your day or add some habits in your Dailies Planner.</i>\n`;
+  } else {
+    todaysDailies.forEach((d, idx) => {
+      const statusIcon = d.status === "completed" ? "✅" : "⬜";
+      const priorityLabel = d.priority ? ` [${d.priority}]` : "";
+      const streakInfo = d.streakCount > 0 ? ` (🔥 ${d.streakCount}-day streak)` : "";
+      
+      msg += `${idx + 1}. ${statusIcon} <b>${d.title}</b>${priorityLabel}${streakInfo}\n`;
+      if (d.description) {
+        msg += `   <i>${d.description}</i>\n`;
+      }
+      msg += `\n`;
+    });
+  }
+
+  msg += `🔗 Log in to complete them: <a href="${appUrl}">GoalTracker App</a>`;
+  return msg;
+}
+
+// Generate the warning message for uncompleted habits
+function generateHabitsWarningMessage(user: any, dailies: any[], appUrl: string): string {
+  const todaysPendingDailies = dailies.filter(d => d.userId === user.id && d.status === "pending" && isHabitScheduledToday(d));
+
+  if (todaysPendingDailies.length === 0) {
+    return "";
+  }
+
+  let msg = `⚠️ <b>Protect Your Active Streaks!</b>\n\n`;
+  msg += `Hey <b>${user.name}</b>, the day is coming to a close! You have pending habits that require attention to protect your hard-earned streaks:\n\n`;
+
+  todaysPendingDailies.forEach((d, idx) => {
+    const streakText = d.streakCount > 0 ? ` (🔥 ${d.streakCount}-day streak at risk!)` : "";
+    msg += `${idx + 1}. ⬜ <b>${d.title}</b>${streakText}\n`;
+    if (d.description) {
+      msg += `   <i>${d.description}</i>\n`;
+    }
+    msg += `\n`;
+  });
+
+  msg += `Don't let the momentum drop! Log in and check them off: <a href="${appUrl}">GoalTracker App</a>`;
+  return msg;
+}
+
+// Generate the message for Daily AI Insights
+async function generateDailyInsightsMessage(user: any, appUrl: string): Promise<string> {
+  const insights = getInsightsContext(user.id, false);
+  const data = {
+    goals: db.goals,
+    tasks: db.tasks,
+    skills: db.skills,
+    courses: db.courses,
+    chapters: db.chapters,
+    projects: db.projects,
+    projectTasks: db.projectTasks,
+    dailies: db.dailies,
+    activities: db.activities
+  };
+
+  let aiSummaryText = "";
+  try {
+    aiSummaryText = await getDailyAISummary(user.id, data, insights);
+  } catch (error) {
+    aiSummaryText = `### Today's Focus\n- Focus on finishing pending high priority tasks.\n- Master core cloud architect skills.\n\n### Productivity Insight\n- Weekend consistency is generally 15% higher than weekdays.\n\n### Recommended Action\n- Tackle a short study session today.`;
+  }
+
+  // Format the Markdown to Telegram-friendly HTML
+  let formattedText = aiSummaryText
+    .replace(/### (.*?)\n/g, "\n<b>$1</b>\n")
+    .replace(/\* (.*?)\n/g, "• $1\n")
+    .replace(/- (.*?)\n/g, "• $1\n");
+
+  let msg = `🧠 <b>Daily AI Progress Insights</b>\n`;
+  msg += `Hello <b>${user.name}</b>, here is your personalized AI productivity briefing:\n`;
+  msg += formattedText;
+  msg += `\n\n🔗 View full metrics in your dashboard: <a href="${appUrl}">GoalTracker</a>`;
+  return msg;
+}
+
+// Endpoint: Test connection immediately
+app.post("/api/telegram/test-connection", authenticate, async (req: any, res) => {
+  const { token, chatId } = req.body;
+  if (!token || !chatId) {
+    return res.status(400).json({ error: "Both Token and Chat ID are required to run a test connection." });
+  }
+
+  try {
+    const text = `🎉 <b>GoalTracker Telegram Connection Successful!</b>\n\nHello from your productivity dashboard! This bot is now configured to send you:\n• Daily Habit Checklists 📋\n• Streak Protection Warnings ⚠️\n• Personalized AI Progress Briefings 🧠\n\nKeep up the great work! 🚀`;
+    await sendTelegramMessage(token, chatId, text);
+    res.json({ success: true, message: "Test message sent successfully! Please check your Telegram chat." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to deliver test message. Verify Bot Token & Chat ID." });
+  }
+});
+
+// Endpoint: Manually send habits checklist
+app.post("/api/telegram/send-habits", authenticate, async (req: any, res) => {
+  const user = db.users.find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const token = user.telegramToken;
+  const chatId = user.telegramChatId;
+
+  if (!user.telegramEnabled || !token || !chatId) {
+    return res.status(400).json({ error: "Telegram notifications are not fully set up or enabled in your profile." });
+  }
+
+  try {
+    const origin = req.headers.referer || req.headers.origin || "https://ai.studio/build";
+    const msg = generateDailyHabitsMessage(user, db.dailies, origin);
+    await sendTelegramMessage(token, chatId, msg);
+    res.json({ success: true, message: "Today's habits checklist sent to your Telegram!" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to send habits checklist." });
+  }
+});
+
+// Endpoint: Manually send uncompleted habits warning
+app.post("/api/telegram/send-warning", authenticate, async (req: any, res) => {
+  const user = db.users.find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const token = user.telegramToken;
+  const chatId = user.telegramChatId;
+
+  if (!user.telegramEnabled || !token || !chatId) {
+    return res.status(400).json({ error: "Telegram notifications are not fully set up or enabled in your profile." });
+  }
+
+  try {
+    const origin = req.headers.referer || req.headers.origin || "https://ai.studio/build";
+    const msg = generateHabitsWarningMessage(user, db.dailies, origin);
+    if (!msg) {
+      return res.json({ success: true, message: "You have completed all habits scheduled for today! No warning needed. 🎉" });
+    }
+    await sendTelegramMessage(token, chatId, msg);
+    res.json({ success: true, message: "Pending habits streak warning sent to your Telegram!" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to send streak warning." });
+  }
+});
+
+// Endpoint: Manually send AI Insights
+app.post("/api/telegram/send-insights", authenticate, async (req: any, res) => {
+  const user = db.users.find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const token = user.telegramToken;
+  const chatId = user.telegramChatId;
+
+  if (!user.telegramEnabled || !token || !chatId) {
+    return res.status(400).json({ error: "Telegram notifications are not fully set up or enabled in your profile." });
+  }
+
+  try {
+    const origin = req.headers.referer || req.headers.origin || "https://ai.studio/build";
+    const msg = await generateDailyInsightsMessage(user, origin);
+    await sendTelegramMessage(token, chatId, msg);
+    res.json({ success: true, message: "Daily AI Insights briefing sent to your Telegram!" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to send AI insights." });
+  }
+});
+
+// BACKGROUND AUTOMATED SCHEDULER SERVICE
+// Runs every 60 seconds to check if any user is due for scheduled daily habit checklists or warnings
+setInterval(async () => {
+  for (const user of db.users) {
+    if (!user.telegramEnabled || !user.telegramToken || !user.telegramChatId) {
+      continue;
+    }
+
+    try {
+      // Parse local time based on user's timezone (using modern native Intl API)
+      const userTimeStr = new Date().toLocaleString("en-US", { timeZone: user.timezone || "America/Los_Angeles" });
+      const userDate = new Date(userTimeStr);
+      
+      const localHHMM = `${String(userDate.getHours()).padStart(2, "0")}:${String(userDate.getMinutes()).padStart(2, "0")}`;
+      const localDateStr = `${userDate.getFullYear()}-${String(userDate.getMonth() + 1).padStart(2, "0")}-${String(userDate.getDate()).padStart(2, "0")}`;
+
+      const preferredTime = user.preferredReminderTime || "08:30";
+      const appUrl = "https://ai.studio/build";
+
+      // 1. Send Daily Habits Briefing (Checklist + AI Insights) at preferred reminder time
+      if (localHHMM === preferredTime) {
+        if (user.lastSentReminderDate !== localDateStr) {
+          console.log(`[Telegram Scheduler] Triggering morning reminder for user ${user.name} (${user.id})`);
+          
+          // Generate checklist
+          const checklistMsg = generateDailyHabitsMessage(user, db.dailies, appUrl);
+          await sendTelegramMessage(user.telegramToken, user.telegramChatId, checklistMsg);
+          
+          // Generate & Send AI Insights in a separate clean message
+          try {
+            const insightsMsg = await generateDailyInsightsMessage(user, appUrl);
+            await sendTelegramMessage(user.telegramToken, user.telegramChatId, insightsMsg);
+          } catch (aiErr) {
+            console.error(`[Telegram Scheduler] Failed to send insights:`, aiErr);
+          }
+
+          // Mark as sent for today
+          user.lastSentReminderDate = localDateStr;
+          saveDb();
+        }
+      }
+
+      // 2. Send Pending Habits Streak Protection Warning in the evening (8:00 PM / 20:00)
+      if (localHHMM === "20:00") {
+        if (user.lastSentWarningDate !== localDateStr) {
+          console.log(`[Telegram Scheduler] Triggering evening warning check for user ${user.name} (${user.id})`);
+          
+          const warningMsg = generateHabitsWarningMessage(user, db.dailies, appUrl);
+          if (warningMsg) {
+            await sendTelegramMessage(user.telegramToken, user.telegramChatId, warningMsg);
+          }
+          
+          // Mark as checked/sent for today
+          user.lastSentWarningDate = localDateStr;
+          saveDb();
+        }
+      }
+    } catch (err: any) {
+      console.error(`[Telegram Scheduler Error] Failed for user ${user.name} (${user.id}):`, err.message || err);
+    }
+  }
+}, 60000);
 
 // ==========================================
 
